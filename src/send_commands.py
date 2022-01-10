@@ -1,4 +1,5 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
+
 from __future__ import print_function
 
 import time
@@ -19,14 +20,18 @@ def main():
     signal.signal(signal.SIGINT, terminate_program)
 
     # rob = robobo.HardwareRobobo(camera=True).connect(address="192.168.1.7")
-    rob = robobo.SimulationRobobo().connect(address='192.168.1.6', port=19997)
+    rob = robobo.SimulationRobobo().connect(address='localhost', port=19997)
 
     rob.play_simulation()
 
     # Following code moves the robot
     for i in range(10):
             print("robobo is at {}".format(rob.position()))
-            rob.move(5, 5, 2000)
+            if i%2 == 0:
+                rob.move(25,10, 5000)
+            if i%3 == 0:
+                rob.move(10,25,5000)
+            rob.move(25, 25, 5000)
    
     print("robobo is at {}".format(rob.position()))
     rob.sleep(1)
@@ -34,7 +39,7 @@ def main():
     # Following code moves the phone stand
     rob.set_phone_pan(343, 100)
     rob.set_phone_tilt(109, 100)
-    time.sleep(1)
+    # time.sleep(1)
     rob.set_phone_pan(11, 100)
     rob.set_phone_tilt(26, 100)
 
@@ -52,7 +57,7 @@ def main():
     time.sleep(0.1)
 
     # IR reading
-    for i in range(1000000):
+    for i in range(100):
         print("ROB Irs: {}".format(np.log(np.array(rob.read_irs()))/10))
         time.sleep(0.1)
 
