@@ -1,10 +1,12 @@
 def forward(rob):
-    pass
+    rob.move(20, 20, 2000)
+
 
 def turn_left(rob):
-    pass
+    rob.move(-20, 20, 1000)
+
 
 def turn_right(rob):
-    pass
+    rob.move(20, -20, 1000)
 
 
