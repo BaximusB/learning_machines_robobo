@@ -20,6 +20,8 @@ class Agent:
         self.observed_state = None  # state agent is in after taking action a
         self.last_action = None
         self.threshold = 0.10
+        self.sensors_triggered = 0
+        self.previous_sensors = 0
 
 
     def get_state(self):
@@ -73,8 +75,9 @@ class Agent:
                 return 1
 
         else:
-            sensors_triggered = sum([x < self.threshold for x in self.rob.read_irs()[3:]])
-            return -1 * sensors_triggered
+            self.sensors_triggered = sum([x < self.threshold for x in self.rob.read_irs()[3:]]) - self.previous_sensors
+            self.previous_sensors = sum([x < self.threshold for x in self.rob.read_irs()[3:]])
+            return -1 * self.sensors_triggered
 
 
 
