@@ -1,3 +1,7 @@
+import numpy as np
+from actions import *
+
+
 class Agent:
     def __init__(self, rob):
         """
@@ -5,10 +9,10 @@ class Agent:
         num_states likely equals 6: 5 observing states and one state when nothing is observed
         """
         self.gamma = None
-        self.eps = None
+        self.eps = 0.5  # high epsilon for testing purposes. subject to change
         self.alpha = None
         self.rob = rob
-        self.q_values = {x: list() for x in range(6)}
+        self.q_values = {x: [0, 0, 0] for x in range(6)}    # for now assuming three actions
 
 
     def get_state(self):
@@ -20,13 +24,16 @@ class Agent:
         pass
 
 
-    def action(self):
+    def action(self, state):
         """
         Use epsilon greedy policy to determine action
-        Easy with np.random.binomial and np.random.choice
-        returns action or action_index, both int
+        runs certain action based on index, currently only three actions
         """
-        pass
+        if np.random.binomial(1, self.eps) == 1:
+            action_index = np.random.choice([0, 1, 2])  #pick a random action based on the index. see actions.py
+        else:
+            action_index = np.argmax(self.q_values[state])  # pick the best action based on q-values
+        select_action(self.rob, action_index)
 
 
     def get_reward(self):
@@ -53,3 +60,5 @@ class Agent:
         returns nothing, should likely store values of self.q_values in file
         """
         pass
+
+
