@@ -1,6 +1,7 @@
 import numpy as np
 from actions import *
 import time
+import os
 
 class Agent:
     def __init__(self, rob):
@@ -9,13 +10,16 @@ class Agent:
         num_states likely equals 6: 5 observing states and one state when nothing is observed
         """
         self.gamma = 0.9
-        self.eps = 0.2
-        self.alpha = 0.5
+        self.eps = 0.3
+        self.epsmin = 0.1
+        self.decay = 0.1
+        self.alpha = 0.4
         self.rob = rob
-        self.q_values = {x: [1, 0, 0, 0, 0] for x in range(4)}    # for now assuming five actions
+        self.q_values = {x: [0, 0, 0, 0, 0] for x in range(4)}    # for now assuming five actions
         self.current_state = None   # state agent is in
         self.observed_state = None  # state agent is in after taking action a
         self.last_action = None
+        self.threshold = 0.10
 
 
     def get_state(self):
@@ -24,20 +28,20 @@ class Agent:
         States: observed front, right, left, front&right, front&left, nothing
         returns int
         """
-        sensors = [-np.inf if x == False else x for x in self.rob.read_irs()[3:]]   #only take front sensors
-        if all([x == -np.inf for x in sensors]):
+        sensors = [np.inf if x == False else x for x in self.rob.read_irs()[3:]]   #only take front sensors
+        if all([x == np.inf for x in sensors]):
             return 0    # state 0 is no observations
 
-        elif np.argmax(sensors) == 0 or np.argmax(sensors) == 1:
-            if sensors[0] < 0.15 or sensors[1] < 0.15:
+        elif np.argmin(sensors) == 0 or np.argmin(sensors) == 1:
+            if sensors[0] < self.threshold or sensors[1] < self.threshold:
                 return 1       # object to the right
 
-        elif np.argmax(sensors) == 2:
-            if sensors[2] < 0.15:
+        elif np.argmin(sensors) == 2:
+            if sensors[2] < self.threshold:
                 return 2      # object directly in front
 
-        elif np.argmax(sensors) == 3 or np.argmax(sensors) == 4:
-            if sensors[3] < 0.15 or sensors[4] < 0.15:
+        elif np.argmin(sensors) == 3 or np.argmin(sensors) == 4:
+            if sensors[3] < self.threshold or sensors[4] < self.threshold:
                 return 3      # object to the left
 
         return 0
@@ -62,13 +66,15 @@ class Agent:
         Positive if not observed (could be 1, 5, 10)
         returns int
         """
-        if self.observed_state == 0:
+        if self.observed_state == 0:    # no object in proximity
             if self.last_action == 0:
-                return 3
+                return 5
             else:
                 return 1
+
         else:
-            return -1
+            sensors_triggered = sum([x < self.threshold for x in self.rob.read_irs()[3:]])
+            return -1 * sensors_triggered
 
 
 
@@ -86,7 +92,7 @@ class Agent:
 
 
 
-def train_loop(rob, episodes=15, steps=50):
+def train_loop(rob, episodes=5, steps=50):
     """
     Combines all of the above to run a training loop and update the Q-values
     Does 15 training epochs with 50 steps per epoch
@@ -105,9 +111,22 @@ def train_loop(rob, episodes=15, steps=50):
             agent.calc_Q_values(agent.last_action, reward)
             agent.current_state = agent.observed_state
 
-        for key, value in agent.q_values.items():
-            print(f"State {key}, Qvalues: {value}")
+        if agent.eps > agent.epsmin:
+            agent.eps -= agent.decay
+
+        for key, values in agent.q_values.items():
+            print(f"State {key} Q-values: {values}")
         agent.rob.stop_world()
         time.sleep(1)
 
+
+    if os.path.exists("./src/Qvalues.txt"):
+        os.remove('./src/Qvalues.txt')
+    for key, values in agent.q_values.items():
+        f = open('./src/Qvalues.txt', 'a')
+        string = ""
+        for value in values:
+            string = string + "," + str(value)
+        f.write(string)
+        f.close()
 
