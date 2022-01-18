@@ -20,6 +20,8 @@ class Agent:
         self.observed_state = None  # state agent is in after taking action a
         self.last_action = None
         self.threshold = 0.10
+        self.sensors_triggered = 0
+        self.previous_sensors = 0
 
 
     def get_state(self):
@@ -28,7 +30,10 @@ class Agent:
         States: observed front, right, left, front&right, front&left, nothing
         returns int
         """
-        sensors = [np.inf if x == False else x for x in self.rob.read_irs()[3:]]   #only take front sensors
+        read = self.rob.read_irs()[3:]
+        sensors = [np.inf if x == False else x for x in read]   #only take front sensors
+        self.sensors_triggered = sum([x < self.threshold for x in read]) - self.previous_sensors
+        self.previous_sensors = sum([x < self.threshold for x in read])
         if all([x == np.inf for x in sensors]):
             return 0    # state 0 is no observations
 
@@ -73,8 +78,7 @@ class Agent:
                 return 1
 
         else:
-            sensors_triggered = sum([x < self.threshold for x in self.rob.read_irs()[3:]])
-            return -1 * sensors_triggered
+            return -1 * self.sensors_triggered
 
 
 
@@ -101,7 +105,7 @@ def train_loop(rob, episodes=5, steps=50):
     agent = Agent(rob)
     for episode in range(episodes):
         agent.rob.play_simulation()
-        time.sleep(1)
+        time.sleep(3)
         agent.current_state = agent.get_state()
         for step in range(steps):
             agent.action(agent.current_state)
