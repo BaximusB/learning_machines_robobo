@@ -2,6 +2,8 @@ import numpy as np
 from actions import *
 import time
 import os
+import math
+
 
 class Agent:
     def __init__(self, rob):
@@ -10,18 +12,21 @@ class Agent:
         num_states likely equals 6: 5 observing states and one state when nothing is observed
         """
         self.gamma = 0.9
-        self.eps = 0.3
+        self.eps = 0.5
         self.epsmin = 0.1
-        self.decay = 0.1
-        self.alpha = 0.4
+        self.decay = 0.05
+        self.alpha = 0.7
         self.rob = rob
-        self.q_values = {x: [0, 0, 0, 0, 0] for x in range(4)}    # for now assuming five actions
+        self.q_values = {x: [0, 0, 0] for x in range(4)}    # for now assuming five actions
         self.current_state = None   # state agent is in
         self.observed_state = None  # state agent is in after taking action a
         self.last_action = None
-        self.threshold = 0.10
-        self.sensors_triggered = 0
-        self.previous_sensors = 0
+        self.threshold = 0.15
+        self.total_distance = 0
+        self.terminal_state = False
+        self.num_moves = 0
+        self.pos_before = [None, None]
+        self.pos_after = [None, None]
 
 
     def get_state(self):
@@ -30,26 +35,41 @@ class Agent:
         States: observed front, right, left, front&right, front&left, nothing
         returns int
         """
-        read = self.rob.read_irs()[3:]
+        read = self.rob.read_irs()
         sensors = [np.inf if x == False else x for x in read]   #only take front sensors
-        self.sensors_triggered = sum([x < self.threshold for x in read]) - self.previous_sensors
-        self.previous_sensors = sum([x < self.threshold for x in read])
+        self.sensors_triggered = sum([x < self.threshold for x in read])
         if all([x == np.inf for x in sensors]):
             return 0    # state 0 is no observations
 
-        elif np.argmin(sensors) == 0 or np.argmin(sensors) == 1:
-            if sensors[0] < self.threshold or sensors[1] < self.threshold:
-                return 1       # object to the right
-
-        elif np.argmin(sensors) == 2:
-            if sensors[2] < self.threshold:
-                return 2      # object directly in front
-
         elif np.argmin(sensors) == 3 or np.argmin(sensors) == 4:
             if sensors[3] < self.threshold or sensors[4] < self.threshold:
+                return 1       # object to the right
+
+        elif np.argmin(sensors) == 5:
+            if sensors[5] < self.threshold:
+                return 2      # object directly in front
+
+        elif np.argmin(sensors) == 6 or np.argmin(sensors) == 7:
+            if sensors[6] < self.threshold or sensors[7] < self.threshold:
                 return 3      # object to the left
 
+        # elif np.argmin(sensors) in [0, 1, 2]:
+        #     if any([x < self.threshold for x in sensors[0:2]]) and any([x < self.threshold for x in sensors[3:]]):
+        #         return 4    # object in back and in front
+
         return 0
+
+
+    def get_position(self):
+        position = self.rob.getPosition()[1]
+        return [position[0], position[1]]
+
+
+    def update_distance(self):
+        xdiff = abs(self.pos_before[0] - self.pos_after[0])
+        ydiff = abs(self.pos_before[1] - self.pos_after[1])
+        distance = math.sqrt(xdiff**2 + ydiff**2)
+        self.total_distance += distance
 
 
     def action(self, state):
@@ -57,11 +77,11 @@ class Agent:
         Use epsilon greedy policy to determine action
         runs certain action based on index, currently 5 actions
         """
+        action_index = np.argmax(self.q_values[state])
         if np.random.binomial(1, self.eps) == 1:
-            action_index = np.random.choice([0, 1, 2, 3, 4])  #pick a random action based on the index. see actions.py
-        else:
-            action_index = np.argmax(self.q_values[state])  # pick the best action based on q-values
+            action_index = np.random.choice([x for x in range(3) if x != action_index])  #pick a random action based on the index. see actions.py
         self.last_action = action_index
+        self.num_moves += 1
         select_action(self.rob, action_index)
 
 
@@ -71,14 +91,13 @@ class Agent:
         Positive if not observed (could be 1, 5, 10)
         returns int
         """
+        if self.total_distance > 0.6:
+            self.terminal_state = True
+            return 50
         if self.observed_state == 0:    # no object in proximity
-            if self.last_action == 0:
-                return 5
-            else:
-                return 1
-
+            return -1
         else:
-            return -1 * self.sensors_triggered
+            return -1
 
 
 
@@ -89,14 +108,14 @@ class Agent:
         state = self.current_state
         _state = self.observed_state
         current_q = self.q_values[state][action]
-        next_q = np.argmax(self.q_values[_state])
+        next_q = np.max(self.q_values[_state])
         a = self.alpha
         g = self.gamma
         self.q_values[state][action] = current_q + a*(reward + g*next_q - current_q)
 
 
 
-def train_loop(rob, episodes=5, steps=50):
+def train_loop(rob, episodes=10, steps=200):
     """
     Combines all of the above to run a training loop and update the Q-values
     Does 15 training epochs with 50 steps per epoch
@@ -107,9 +126,18 @@ def train_loop(rob, episodes=5, steps=50):
         agent.rob.play_simulation()
         time.sleep(3)
         agent.current_state = agent.get_state()
+        agent.total_distance = 0
         for step in range(steps):
+            if agent.terminal_state:
+                agent.terminal_state = False
+                break
+            agent.pos_before = agent.get_position()
             agent.action(agent.current_state)
             time.sleep(1)
+            agent.pos_after = agent.get_position()
+            agent.update_distance()
+            print(agent.current_state)
+            print(agent.total_distance)
             agent.observed_state = agent.get_state()
             reward = agent.get_reward()
             agent.calc_Q_values(agent.last_action, reward)
