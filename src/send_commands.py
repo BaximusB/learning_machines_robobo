@@ -21,11 +21,11 @@ def main():
     signal.signal(signal.SIGINT, terminate_program)
 
     # rob = robobo.HardwareRobobo(camera=True).connect(address="192.168.1.7")
-    rob = robobo.SimulationRobobo().connect(address='', port=19997)
+    rob = robobo.SimulationRobobo().connect(address='127.0.0.1', port=19997)
 
     # rob.play_simulation()
 
-    train_loop(rob)
+    train_loop(rob, episodes=10)
 
     # Following code gets an image from the camera
     # image = rob.get_image_front()
