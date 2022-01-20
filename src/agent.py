@@ -3,7 +3,7 @@ from actions import *
 import time
 import os
 import math
-
+import matplotlib.pyplot as plt
 
 class Agent:
     def __init__(self, rob):
@@ -12,21 +12,23 @@ class Agent:
         num_states likely equals 6: 5 observing states and one state when nothing is observed
         """
         self.gamma = 0.9
-        self.eps = 0.5
+        self.eps = 0.3
         self.epsmin = 0.1
         self.decay = 0.05
         self.alpha = 0.7
         self.rob = rob
-        self.q_values = {x: [0, 0, 0] for x in range(4)}    # for now assuming five actions
+        self.q_values = {x: [0, 0, 0, 0, 0] for x in range(4)}    # for now assuming five actions
         self.current_state = None   # state agent is in
         self.observed_state = None  # state agent is in after taking action a
         self.last_action = None
-        self.threshold = 0.15
+        self.threshold = 0.12
         self.total_distance = 0
         self.terminal_state = False
         self.num_moves = 0
         self.pos_before = [None, None]
         self.pos_after = [None, None]
+        self.steps = []
+        self.total_reward = []
 
 
     def get_state(self):
@@ -37,7 +39,6 @@ class Agent:
         """
         read = self.rob.read_irs()
         sensors = [np.inf if x == False else x for x in read]   #only take front sensors
-        self.sensors_triggered = sum([x < self.threshold for x in read])
         if all([x == np.inf for x in sensors]):
             return 0    # state 0 is no observations
 
@@ -52,11 +53,6 @@ class Agent:
         elif np.argmin(sensors) == 6 or np.argmin(sensors) == 7:
             if sensors[6] < self.threshold or sensors[7] < self.threshold:
                 return 3      # object to the left
-
-        # elif np.argmin(sensors) in [0, 1, 2]:
-        #     if any([x < self.threshold for x in sensors[0:2]]) and any([x < self.threshold for x in sensors[3:]]):
-        #         return 4    # object in back and in front
-
         return 0
 
 
@@ -69,7 +65,8 @@ class Agent:
         xdiff = abs(self.pos_before[0] - self.pos_after[0])
         ydiff = abs(self.pos_before[1] - self.pos_after[1])
         distance = math.sqrt(xdiff**2 + ydiff**2)
-        self.total_distance += distance
+        if distance > 0.05:
+            self.total_distance += distance
 
 
     def action(self, state):
@@ -79,11 +76,15 @@ class Agent:
         """
         action_index = np.argmax(self.q_values[state])
         if np.random.binomial(1, self.eps) == 1:
-            action_index = np.random.choice([x for x in range(3) if x != action_index])  #pick a random action based on the index. see actions.py
+            action_index = np.random.choice([x for x in range(5)])
+            # action_index = np.random.choice([x for x in range(3) if x != action_index])  #pick a random action based on the index. see actions.py
         self.last_action = action_index
         self.num_moves += 1
         select_action(self.rob, action_index)
 
+    def action_eval(self, state):
+        action_index = np.argmax(self.q_values[state])
+        select_action(self.rob, action_index)
 
     def get_reward(self):
         """
@@ -91,11 +92,10 @@ class Agent:
         Positive if not observed (could be 1, 5, 10)
         returns int
         """
-        if self.total_distance > 0.6:
+        if self.total_distance > 0.7 and self.observed_state == 0:
+            # add obsrved state == 0 to get reward, otherwise reward -1
             self.terminal_state = True
             return 50
-        if self.observed_state == 0:    # no object in proximity
-            return -1
         else:
             return -1
 
@@ -113,9 +113,43 @@ class Agent:
         g = self.gamma
         self.q_values[state][action] = current_q + a*(reward + g*next_q - current_q)
 
+def evaluation(agent, evalsteps=100):
+    agent.rob.play_simulation()
+    time.sleep(3)
+    agent.rob.move(10, -10, np.random.randint(1, 10) * 300)
+    agent.current_state = agent.get_state()
+    time.sleep(1)
+    totalreward = 0
+    totalsteps = 0
+    agent.total_distance = 0
+    for step in range(evalsteps):
+        if agent.terminal_state:
+            agent.terminal_state = False
+            break
+        agent.pos_before = agent.get_position()
+        agent.action_eval(agent.current_state)  # play best move according to policy
+        time.sleep(1)
+        agent.pos_after = agent.get_position()
+        agent.update_distance()
+        agent.observed_state = agent.get_state()
+        time.sleep(1)
+        reward = agent.get_reward()
+        totalreward += reward
+        agent.current_state = agent.observed_state
+        totalsteps += 1
+    agent.steps.append(totalsteps)
+    agent.total_reward.append(totalreward)
+    agent.rob.stop_world()
+    time.sleep(1)
+
+def plot_metrics(agent):
+    plt.plot(agent.total_reward)
+    plt.show()
+    plt.plot(agent.steps)
+    plt.show()
 
 
-def train_loop(rob, episodes=10, steps=200):
+def train_loop(rob, episodes=15, steps=200):
     """
     Combines all of the above to run a training loop and update the Q-values
     Does 15 training epochs with 50 steps per epoch
@@ -125,8 +159,12 @@ def train_loop(rob, episodes=10, steps=200):
     for episode in range(episodes):
         agent.rob.play_simulation()
         time.sleep(3)
+        _time = np.random.randint(1,10)*300
+        agent.rob.move(10, -10, _time) # random-ish orientation
+        time.sleep(1)
         agent.current_state = agent.get_state()
         agent.total_distance = 0
+
         for step in range(steps):
             if agent.terminal_state:
                 agent.terminal_state = False
@@ -136,9 +174,10 @@ def train_loop(rob, episodes=10, steps=200):
             time.sleep(1)
             agent.pos_after = agent.get_position()
             agent.update_distance()
-            print(agent.current_state)
+            print("Current episode, step: ", episode, " ", step)
             print(agent.total_distance)
             agent.observed_state = agent.get_state()
+            time.sleep(1)
             reward = agent.get_reward()
             agent.calc_Q_values(agent.last_action, reward)
             agent.current_state = agent.observed_state
@@ -150,6 +189,9 @@ def train_loop(rob, episodes=10, steps=200):
             print(f"State {key} Q-values: {values}")
         agent.rob.stop_world()
         time.sleep(1)
+        evaluation(agent, 100)
+    plot_metrics(agent)
+
 
 
     if os.path.exists("./src/Qvalues.txt"):
