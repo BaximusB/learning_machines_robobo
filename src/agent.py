@@ -12,8 +12,8 @@ class Agent:
         num_states likely equals 6: 5 observing states and one state when nothing is observed
         """
         self.gamma = 0.9
-        self.eps = 0.3
-        self.epsmin = 0.1
+        self.eps = 0.5
+        self.epsmin = 0.15
         self.decay = 0.05
         self.alpha = 0.7
         self.rob = rob
@@ -65,7 +65,7 @@ class Agent:
         xdiff = abs(self.pos_before[0] - self.pos_after[0])
         ydiff = abs(self.pos_before[1] - self.pos_after[1])
         distance = math.sqrt(xdiff**2 + ydiff**2)
-        if distance > 0.05:
+        if distance > 0.06:
             self.total_distance += distance
 
 
@@ -92,8 +92,8 @@ class Agent:
         Positive if not observed (could be 1, 5, 10)
         returns int
         """
-        if self.total_distance > 0.7 and self.observed_state == 0:
-            # add obsrved state == 0 to get reward, otherwise reward -1
+        if self.total_distance > 0.6 and self.observed_state == 0 and self.current_state == 0:
+            # final state should be a straight movement such that total distance is bigger than 0.6
             self.terminal_state = True
             return 50
         else:
@@ -143,13 +143,15 @@ def evaluation(agent, evalsteps=100):
     time.sleep(1)
 
 def plot_metrics(agent):
+    print("Total reward: ", agent.total_reward)
+    print("Steps: ", agent.steps)
     plt.plot(agent.total_reward)
     plt.show()
     plt.plot(agent.steps)
     plt.show()
 
 
-def train_loop(rob, episodes=15, steps=200):
+def train_loop(rob, episodes=30, steps=200):
     """
     Combines all of the above to run a training loop and update the Q-values
     Does 15 training epochs with 50 steps per epoch
@@ -159,7 +161,7 @@ def train_loop(rob, episodes=15, steps=200):
     for episode in range(episodes):
         agent.rob.play_simulation()
         time.sleep(3)
-        _time = np.random.randint(1,10)*300
+        _time = np.random.randint(1, 10)*300
         agent.rob.move(10, -10, _time) # random-ish orientation
         time.sleep(1)
         agent.current_state = agent.get_state()
@@ -171,13 +173,12 @@ def train_loop(rob, episodes=15, steps=200):
                 break
             agent.pos_before = agent.get_position()
             agent.action(agent.current_state)
-            time.sleep(1)
+            time.sleep(0.5)
             agent.pos_after = agent.get_position()
             agent.update_distance()
             print("Current episode, step: ", episode, " ", step)
             print(agent.total_distance)
             agent.observed_state = agent.get_state()
-            time.sleep(1)
             reward = agent.get_reward()
             agent.calc_Q_values(agent.last_action, reward)
             agent.current_state = agent.observed_state
