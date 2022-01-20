@@ -333,6 +333,9 @@ class SimulationRobobo(Robobo):
         return vrep.unwrap_vrep(
             vrep.simxGetObjectPosition(self._clientID, self._Robobo, -1, vrep.simx_opmode_blocking)
         )
+    def getPosition(self):
+        return vrep.simxGetObjectPosition(self._clientID, self._Robobo, -1, vrep.simx_opmode_blocking)
+
 
     def collected_food(self):
         ints, floats, strings, buffer = vrep.unwrap_vrep(
