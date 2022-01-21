@@ -12,6 +12,8 @@ import signal
 import prey
 
 from agent import *
+from hardware import *
+
 
 def terminate_program(signal_number, frame):
     print("Ctrl-C received, terminating program")
@@ -20,11 +22,13 @@ def terminate_program(signal_number, frame):
 def main():
     signal.signal(signal.SIGINT, terminate_program)
 
-    # rob = robobo.HardwareRobobo(camera=True).connect(address="192.168.1.7")
-    rob = robobo.SimulationRobobo().connect(address='', port=19997)
+    rob = robobo.HardwareRobobo(camera=True).connect(address="")
+    # rob = robobo.SimulationRobobo().connect(address='', port=19997)
 
-    # rob.play_simulation()
-    train_loop(rob)
+
+    # test_robobo(rob, [0, 1, 2, 3], 3) # run to test robobo hardware
+
+    # train_loop(rob) # run to train robobo
 
     # Following code gets an image from the camera
     # image = rob.get_image_front()
