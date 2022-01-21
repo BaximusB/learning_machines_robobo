@@ -21,7 +21,7 @@ class Agent:
         self.current_state = None   # state agent is in
         self.observed_state = None  # state agent is in after taking action a
         self.last_action = None
-        self.threshold = 0.10
+        self.threshold = 0.12
         self.total_distance = 0
         self.terminal_state = False
         self.num_moves = 0
@@ -59,6 +59,10 @@ class Agent:
 
 
     def get_position(self):
+        """
+        See getPosition in simulation.py. Used to obtain position in simulation.
+
+        """
         position = self.rob.getPosition()[1]
         return [position[0], position[1]]
 
@@ -68,6 +72,8 @@ class Agent:
         ydiff = abs(self.pos_before[1] - self.pos_after[1])
         distance = math.sqrt(xdiff**2 + ydiff**2)
         if distance > 0.06:
+            # since rotations are registered as distance (due to middlepoint of robobo) only look at distance travelled
+            # after a certain threshold
             self.total_distance += distance
 
 
@@ -128,7 +134,7 @@ class Agent:
 def evaluation(agent, evalsteps=50):
     agent.rob.play_simulation()
     time.sleep(3)
-    agent.rob.move(10, -10, np.random.randint(1, 10) * 300)
+    agent.rob.move(10, -10, np.random.randint(1, 10) * 300) # random orientation
     agent.current_state = agent.get_state()
     time.sleep(1)
     totalreward = 0
