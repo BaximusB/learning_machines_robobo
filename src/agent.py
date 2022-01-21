@@ -21,7 +21,7 @@ class Agent:
         self.current_state = None   # state agent is in
         self.observed_state = None  # state agent is in after taking action a
         self.last_action = None
-        self.threshold = 0.12
+        self.threshold = 0.10
         self.total_distance = 0
         self.terminal_state = False
         self.num_moves = 0
@@ -67,7 +67,7 @@ class Agent:
         xdiff = abs(self.pos_before[0] - self.pos_after[0])
         ydiff = abs(self.pos_before[1] - self.pos_after[1])
         distance = math.sqrt(xdiff**2 + ydiff**2)
-        if distance > 0.06 and self.observed_state == 0:
+        if distance > 0.06:
             self.total_distance += distance
 
 
@@ -93,10 +93,12 @@ class Agent:
         Positive if not observed (could be 1, 5, 10)
         returns int
         """
-        if self.total_distance > 0.6 and self.observed_state == 0:
+        if self.observed_state == 0:
             # final state should be a straight movement such that total distance is bigger than 0.6
-            self.terminal_state = True
-            return 25
+            if self.total_distance > 1:
+                self.terminal_state = True
+                return 50
+            return -1
         else:
             return -1
 
@@ -123,7 +125,7 @@ class Agent:
             return 1   # state 0 is no observations
         return 0
 
-def evaluation(agent, evalsteps=100):
+def evaluation(agent, evalsteps=50):
     agent.rob.play_simulation()
     time.sleep(3)
     agent.rob.move(10, -10, np.random.randint(1, 10) * 300)
@@ -160,14 +162,25 @@ def plot_metrics(agent):
     print("Steps: ", agent.steps)
     print("Num. of collisions: ", agent.collision_list)
     plt.plot(agent.total_reward)
-    plt.show()
+    plt.title("Cumulative reward", fontsize=16)
+    plt.xlabel("Iteration", fontsize=16)
+    plt.ylabel("Reward", fontsize=16)
+    plt.savefig("Cum_Reward.png")
+
     plt.plot(agent.steps)
-    plt.show()
+    plt.title("Number of steps", fontsize=16)
+    plt.xlabel("Iteration", fontsize=16)
+    plt.ylabel("Steps", fontsize=16)
+    plt.savefig("Steps.png")
     plt.plot(agent.collision_list)
-    plt.show()
+    plt.title("Number of collisions", fontsize=16)
+    plt.xlabel("Iteration", fontsize=16)
+    plt.ylabel("Collisions", fontsize=16)
+    plt.savefig("Collisions.png")
 
 
-def train_loop(rob, episodes=10, steps=200):
+
+def train_loop(rob, episodes=100, steps=2000):
     """
     Combines all of the above to run a training loop and update the Q-values
     Does 15 training epochs with 50 steps per epoch
@@ -177,9 +190,9 @@ def train_loop(rob, episodes=10, steps=200):
     for episode in range(episodes):
         agent.rob.play_simulation()
         time.sleep(2)
-        # _time = np.random.randint(1, 10)*300
-        # agent.rob.move(10, -10, _time) # random-ish orientation
-        # time.sleep(1)
+        _time = np.random.randint(1, 10)*300
+        agent.rob.move(10, -10, _time) # random-ish orientation
+        time.sleep(1)
         agent.current_state = agent.get_state()
         agent.total_distance = 0
 
