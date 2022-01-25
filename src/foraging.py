@@ -81,7 +81,7 @@ class Agent:
                 return 5
             return 0
         if x < self.width/3:
-            self.last_position == "L"
+            self.last_position = "L"
             return 1       # object on left side
         if (x >= self.width/3) and (x <= (self.width/3 * 2)):
             # if any(read[x] < 0.05 for x in range(4, 7)):    # only look at front 3 sensors
@@ -123,6 +123,7 @@ class Agent:
             self.terminal_state = True
             return 100
         if (self.food_eaten - temp_food) > 0:
+            self.last_position = None
             return 20
         else:
             return -1
