@@ -23,7 +23,10 @@ class Agent:
         self.current_state = None   # state agent is in
         self.observed_state = None  # state agent is in after taking action a
         self.terminal_state = False
+        self.rewards = 0
+        self.steps = []
         self.total_reward = []
+        self.food_list = []
         self.low_bound = np.array([0, 100, 0])
         self.upper_bound = np.array([40, 255, 40])
         self.width = None
@@ -53,7 +56,7 @@ class Agent:
         self.width = image.shape[0]
         self.height = image.shape[1]
         cv2.imwrite("test.png", image)
-        # print(image.shape)
+        #print(image.shape)
         mask = cv2.inRange(image, self.low_bound, self.upper_bound)
         cv2.imwrite("test1.png", mask)
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -63,7 +66,7 @@ class Agent:
         contour = contours[contour_index]
         M = cv2.moments(contour)
         if M["m00"] == 0:
-            return None
+            return None, None
         x = int(M["m10"]/M["m00"])
         y = int(M["m01"]/M["m00"])
         return x, y
@@ -76,18 +79,35 @@ class Agent:
         returns int
         """
         read = [np.inf if x is False else x for x in self.rob.read_irs()]
+
+        x, y = self.get_blob_location()
+        if (x is None):   # No object
+            #if self.current_state == 1:
+            #    return 4
+            #if self.current_state == 3:
+            #    return 5
+            return 0
+        if y > self.height/2:
+            return 4
+        if x < self.width/3:
+            #self.last_position = "L"
+
         x,y = self.get_blob_location()
         if (x is None):   # No object
             return 0
         if y > self.height/2:
             return 4        # object is far
         if x < self.width/3:
+
             return 1       # object on left side
         if (x >= self.width/3) and (x <= (self.width/3 * 2)):
             # if any(read[x] < 0.05 for x in range(4, 7)):    # only look at front 3 sensors
             #     return 4    # object touched
             return 2        #object in middle
         if x > (self.width/3 * 2):
+
+            #self.last_position = "R"
+
             return 3        # object on right side
         return 0
 
@@ -120,11 +140,12 @@ class Agent:
         print("Collected food: ", self.food_eaten)
         if self.rob.collected_food() == 7:
             self.terminal_state = True
-            self.last_position = None
+            #self.last_position = None
             return 20
         if (self.food_eaten - temp_food) > 0:
-            self.last_position = None
+            #self.last_position = None
             return 20
+        
         else:
             return 0
 
@@ -149,7 +170,6 @@ def evaluation(agent, evalsteps=50):
     agent.rob.move(10, -10, np.random.randint(1, 10) * 300) # random orientation
     agent.current_state = agent.get_state()
     time.sleep(1)
-    totalreward = 0
     totalsteps = 0
     collisioncount = 0
     agent.total_distance = 0
@@ -157,21 +177,17 @@ def evaluation(agent, evalsteps=50):
         if agent.terminal_state:
             agent.terminal_state = False
             break
-        agent.pos_before = agent.get_position()
         agent.action_eval(agent.current_state)  # play best move according to policy
-        time.sleep(0.5)
-        agent.pos_after = agent.get_position()
-        agent.update_distance()
+        time.sleep(0.2)
         agent.observed_state = agent.get_state()
-        collisioncount += agent.collision()
-        time.sleep(0.5)
+        time.sleep(0.2)
         reward = agent.get_reward()
-        totalreward += reward
+        agent.rewards += reward
         agent.current_state = agent.observed_state
         totalsteps += 1
+    agent.total_reward.append(agent.rewards)
     agent.steps.append(totalsteps)
-    agent.total_reward.append(totalreward)
-    agent.collision_list.append(collisioncount)
+    agent.food_list.append(agent.food_eaten)
     agent.rob.stop_world()
     time.sleep(1)
 
@@ -191,11 +207,11 @@ def plot_metrics(agent):
     plt.xlabel("Iteration", fontsize=16)
     plt.ylabel("Steps", fontsize=16)
     plt.savefig("Steps.png")
-    plt.plot(agent.collision_list)
-    plt.title("Number of collisions", fontsize=16)
+    plt.plot(agent.food_list)
+    plt.title("Number of food gathered", fontsize=16)
     plt.xlabel("Iteration", fontsize=16)
-    plt.ylabel("Collisions", fontsize=16)
-    plt.savefig("Collisions.png")
+    plt.ylabel("Food", fontsize=16)
+    plt.savefig("Food.png")
 
 
 def train_loop(rob, episodes=20, steps=1000):
@@ -223,7 +239,7 @@ def train_loop(rob, episodes=20, steps=1000):
             print("Current episode, step: ", episode)
             print(f"Current state: {agent.current_state}, took action {agent.last_action}")
             agent.observed_state = agent.get_state()
-            time.sleep(0.5)
+            time.sleep(0.2)
             reward = agent.get_reward()
             agent.calc_Q_values(agent.last_action, reward)
             agent.current_state = agent.observed_state
@@ -236,10 +252,10 @@ def train_loop(rob, episodes=20, steps=1000):
         agent.rob.stop_world()
         time.sleep(1)
 
-    if os.path.exists("./src/Qvalues.txt"):
-        os.remove('./src/Qvalues.txt')
+    if os.path.exists("Qvalues.txt"):
+        os.remove('Qvalues.txt')
     for key, values in agent.q_values.items():
-        f = open('./src/Qvalues.txt', 'a')
+        f = open('Qvalues.txt', 'a')
         string = ""
         for value in values:
             string = string + "," + str(value)
