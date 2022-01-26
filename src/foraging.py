@@ -87,18 +87,12 @@ class Agent:
             #if self.current_state == 3:
             #    return 5
             return 0
-        if y > self.height/2:
-            return 4
-        if x < self.width/3:
-            #self.last_position = "L"
 
-        x,y = self.get_blob_location()
         if (x is None):   # No object
             return 0
         if y > self.height/2:
             return 4        # object is far
         if x < self.width/3:
-
             return 1       # object on left side
         if (x >= self.width/3) and (x <= (self.width/3 * 2)):
             # if any(read[x] < 0.05 for x in range(4, 7)):    # only look at front 3 sensors
@@ -214,7 +208,7 @@ def plot_metrics(agent):
     plt.savefig("Food.png")
 
 
-def train_loop(rob, episodes=20, steps=1000):
+def train_loop(rob, episodes=1, steps=1000):
     """
     Combines all of the above to run a training loop and update the Q-values
     Does 15 training epochs with 50 steps per epoch
