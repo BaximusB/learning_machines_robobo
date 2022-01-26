@@ -208,7 +208,7 @@ def plot_metrics(agent):
     plt.savefig("Food.png")
 
 
-def train_loop(rob, episodes=1, steps=1000):
+def train_loop(rob, episodes=5, steps=20):
     """
     Combines all of the above to run a training loop and update the Q-values
     Does 15 training epochs with 50 steps per epoch
@@ -245,6 +245,8 @@ def train_loop(rob, episodes=1, steps=1000):
             print(f"State {key} Q-values: {values}")
         agent.rob.stop_world()
         time.sleep(1)
+        evaluation(agent, 100)
+    plot_metrics(agent)
 
     if os.path.exists("Qvalues.txt"):
         os.remove('Qvalues.txt')
