@@ -165,8 +165,6 @@ def evaluation(agent, evalsteps=50):
     agent.current_state = agent.get_state()
     time.sleep(1)
     totalsteps = 0
-    collisioncount = 0
-    agent.total_distance = 0
     for step in range(evalsteps):
         if agent.terminal_state:
             agent.terminal_state = False
@@ -189,26 +187,28 @@ def evaluation(agent, evalsteps=50):
 def plot_metrics(agent):
     print("Total reward: ", agent.total_reward)
     print("Steps: ", agent.steps)
-    print("Num. of collisions: ", agent.collision_list)
+    print("Num. of food: ", agent.food_list)
     plt.plot(agent.total_reward)
     plt.title("Cumulative reward", fontsize=16)
     plt.xlabel("Iteration", fontsize=16)
     plt.ylabel("Reward", fontsize=16)
     plt.savefig("Cum_Reward.png")
-
+    plt.clf()
     plt.plot(agent.steps)
     plt.title("Number of steps", fontsize=16)
     plt.xlabel("Iteration", fontsize=16)
     plt.ylabel("Steps", fontsize=16)
     plt.savefig("Steps.png")
+    plt.clf()
     plt.plot(agent.food_list)
     plt.title("Number of food gathered", fontsize=16)
     plt.xlabel("Iteration", fontsize=16)
     plt.ylabel("Food", fontsize=16)
     plt.savefig("Food.png")
+    plt.clf()
 
 
-def train_loop(rob, episodes=5, steps=20):
+def train_loop(rob, episodes=2, steps=2):
     """
     Combines all of the above to run a training loop and update the Q-values
     Does 15 training epochs with 50 steps per epoch
@@ -245,7 +245,7 @@ def train_loop(rob, episodes=5, steps=20):
             print(f"State {key} Q-values: {values}")
         agent.rob.stop_world()
         time.sleep(1)
-        evaluation(agent, 100)
+        evaluation(agent, 2)
     plot_metrics(agent)
 
     if os.path.exists("Qvalues.txt"):
