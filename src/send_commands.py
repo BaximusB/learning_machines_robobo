@@ -11,7 +11,8 @@ import sys
 import signal
 import prey
 
-from agent import *
+# from agent import *
+import foraging
 from hardware import *
 
 
@@ -22,8 +23,15 @@ def terminate_program(signal_number, frame):
 def main():
     signal.signal(signal.SIGINT, terminate_program)
 
-    rob = robobo.HardwareRobobo(camera=True).connect(address="")
-    # rob = robobo.SimulationRobobo().connect(address='', port=19997)
+    # rob = robobo.HardwareRobobo(camera=True).connect(address="")
+    rob = robobo.SimulationRobobo().connect(address='192.168.1.101', port=19997)
+    rob.set_phone_tilt(26, 10)
+    foraging.train_loop(rob)
+
+    # rob.play_simulation()
+    # time.sleep(1)
+
+    # im = rob.get_image_front()
 
 
     # test_robobo(rob, [0, 1, 2, 3], 3) # run to test robobo hardware

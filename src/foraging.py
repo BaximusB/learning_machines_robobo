@@ -13,10 +13,10 @@ class Agent:
         num_states likely equals 6: 5 observing states and one state when nothing is observed
         """
         self.gamma = 0.9
-        self.eps = 0.25
+        self.eps = 0.5
         self.epsmin = 0.1
-        self.decay = 0.05
-        self.alpha = 0.4
+        self.decay = 0.1
+        self.alpha = 0.3
         self.rob = rob
         self.last_action = None
         self.q_values = {x: [0, 0, 0, 0, 0] for x in range(6)}    # for now assuming five actions
@@ -75,9 +75,9 @@ class Agent:
         read = [np.inf if x is False else x for x in self.rob.read_irs()]
         x = self.get_blob_location()
         if (x is None):   # No object
-            if self.last_position == "L":
+            if self.current_state == 1:
                 return 4
-            if self.last_position == "R":
+            if self.current_state == 3:
                 return 5
             return 0
         if x < self.width/3:
@@ -119,14 +119,17 @@ class Agent:
         temp_food = self.food_eaten
         self.food_eaten = self.rob.collected_food()
         print("Collected food: ", self.food_eaten)
-        if self.rob.collected_food()==7:
+        if self.rob.collected_food() == 7:
             self.terminal_state = True
-            return 100
+            self.last_position = None
+            return 20
         if (self.food_eaten - temp_food) > 0:
             self.last_position = None
             return 20
-        else:
+        if self.observed_state in [4, 5]:
             return -1
+        else:
+            return -2
 
     def calc_Q_values(self, action, reward):
         """
@@ -198,7 +201,7 @@ def plot_metrics(agent):
     plt.savefig("Collisions.png")
 
 
-def train_loop(rob, episodes=20, steps=1000):
+def train_loop(rob, episodes=10, steps=1000):
     """
     Combines all of the above to run a training loop and update the Q-values
     Does 15 training epochs with 50 steps per epoch
@@ -215,7 +218,7 @@ def train_loop(rob, episodes=20, steps=1000):
 
         for step in range(steps):
             if agent.terminal_state:
-                agent.terminal_state=False
+                agent.terminal_state = False
                 break
 
             agent.action(agent.current_state)
@@ -223,6 +226,7 @@ def train_loop(rob, episodes=20, steps=1000):
             print("Current episode, step: ", episode)
             print(f"Current state: {agent.current_state}, took action {agent.last_action}")
             agent.observed_state = agent.get_state()
+            time.sleep(0.2)
             reward = agent.get_reward()
             agent.calc_Q_values(agent.last_action, reward)
             agent.current_state = agent.observed_state
