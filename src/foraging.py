@@ -212,7 +212,7 @@ def plot_metrics(agent):
     plt.clf()
 
 
-def train_loop(rob, episodes=20, steps=1000):
+def train_loop(rob, episodes=50, steps=1000):
     """
     Combines all of the above to run a training loop and update the Q-values
     Does 15 training epochs with 50 steps per epoch
