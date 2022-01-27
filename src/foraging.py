@@ -84,15 +84,8 @@ class Agent:
 
         x, y = self.get_blob_location()
         if (x is None):   # No object
-            #if self.current_state == 1:
-            #    return 4
-            #if self.current_state == 3:
-            #    return 5
             return 0
-
-        if (x is None):   # No object
-            return 0
-        if y > self.height/2:
+        if y < self.height/2:
            return 4        # object is far
         if x < self.width/3:
             return 1       # object on left side
@@ -156,8 +149,6 @@ class Agent:
         """
         state = self.current_state
         _state = self.observed_state
-
-        print("Current state is ", state, " obsereved state is ", _state)
         current_q = self.q_values[state][action]
         next_q = np.max(self.q_values[_state])
         a = self.alpha
@@ -167,7 +158,7 @@ class Agent:
 
 
 
-def evaluation(agent, evalsteps=100):
+def evaluation(agent, evalsteps = 300):
     agent.rob.play_simulation()
     time.sleep(3)
     agent.rob.move(10, -10, np.random.randint(1, 10) * 300) # random orientation
@@ -181,6 +172,11 @@ def evaluation(agent, evalsteps=100):
         agent.action_eval(agent.current_state)  # play best move according to policy
         time.sleep(0.2)
         agent.observed_state = agent.get_state()
+        if agent.current_state == 0:
+            if agent.observed_state == 0:
+                agent.counter += 1
+            else:
+                agent.counter = 0
         time.sleep(0.2)
         reward = agent.get_reward()
         agent.rewards += reward
@@ -217,7 +213,7 @@ def plot_metrics(agent):
     plt.clf()
 
 
-def train_loop(rob, episodes=50, steps=1000):
+def train_loop(rob, episodes=30, steps=1000):
     """
     Combines all of the above to run a training loop and update the Q-values
     Does 15 training epochs with 50 steps per epoch
@@ -260,7 +256,6 @@ def train_loop(rob, episodes=50, steps=1000):
             agent.alpha -= agent.decay
         if agent.alpha < agent.alphamin:
             agent.alpha = agent.alphamin
-
 
         for key, values in agent.q_values.items():
             print(f"State {key} Q-values: {values}")
