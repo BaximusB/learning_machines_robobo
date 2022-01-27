@@ -13,13 +13,14 @@ class Agent:
         num_states likely equals 6: 5 observing states and one state when nothing is observed
         """
         self.gamma = 0.9
-        self.eps = 0.34
-        self.epsmin = 0.02
+        self.eps = 0.40
+        self.epsmin = 0.05
         self.decay = 0.04
-        self.alpha = 0.4
+        self.alpha = 0.3
+        self.alphamin = 0.01
         self.rob = rob
         self.last_action = None
-        self.q_values = {x: [0, 0, 0, 0, 0] for x in range(4)}    # for now assuming five actions
+        self.q_values = {x: [np.random.uniform(0, 1) for _ in range(5)] for x in range(5)}    # for now assuming five actions
         self.current_state = None   # state agent is in
         self.observed_state = None  # state agent is in after taking action a
         self.terminal_state = False
@@ -91,8 +92,8 @@ class Agent:
 
         if (x is None):   # No object
             return 0
-        #if y > self.height/2:
-        #    return 4        # object is far
+        if y > self.height/2:
+           return 4        # object is far
         if x < self.width/3:
             return 1       # object on left side
         if (x >= self.width/3) and (x <= (self.width/3 * 2)):
@@ -143,9 +144,11 @@ class Agent:
         if self.counter > 50:
             self.terminal_state = True
             self.counter = 0
-            return -5
+            return -20
         else:
-            return 0
+            return -1
+
+
 
     def calc_Q_values(self, action, reward):
         """
@@ -153,6 +156,8 @@ class Agent:
         """
         state = self.current_state
         _state = self.observed_state
+
+        print("Current state is ", state, " obsereved state is ", _state)
         current_q = self.q_values[state][action]
         next_q = np.max(self.q_values[_state])
         a = self.alpha
@@ -162,7 +167,7 @@ class Agent:
 
 
 
-def evaluation(agent, evalsteps=50):
+def evaluation(agent, evalsteps=100):
     agent.rob.play_simulation()
     time.sleep(3)
     agent.rob.move(10, -10, np.random.randint(1, 10) * 300) # random orientation
@@ -234,7 +239,7 @@ def train_loop(rob, episodes=50, steps=1000):
 
             agent.action(agent.current_state)
             time.sleep(0.2)
-            print("Current episode, step: ", episode)
+            print("Current episode, step: ", episode, " ", step)
             print(f"Current state: {agent.current_state}, took action {agent.last_action}")
             agent.observed_state = agent.get_state()
             time.sleep(0.2)
@@ -251,6 +256,11 @@ def train_loop(rob, episodes=50, steps=1000):
             agent.eps -= agent.decay
         if agent.eps < agent.epsmin:
             agent.eps = agent.epsmin
+        if agent.alpha > agent.alphamin:
+            agent.alpha -= agent.decay
+        if agent.alpha < agent.alphamin:
+            agent.alpha = agent.alphamin
+
 
         for key, values in agent.q_values.items():
             print(f"State {key} Q-values: {values}")
