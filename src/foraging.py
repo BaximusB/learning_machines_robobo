@@ -19,7 +19,7 @@ class Agent:
         self.alpha = 0.4
         self.rob = rob
         self.last_action = None
-        self.q_values = {x: [0, 0, 0, 0, 0] for x in range(5)}    # for now assuming five actions
+        self.q_values = {x: [0, 0, 0, 0, 0] for x in range(4)}    # for now assuming five actions
         self.current_state = None   # state agent is in
         self.observed_state = None  # state agent is in after taking action a
         self.terminal_state = False
@@ -33,6 +33,7 @@ class Agent:
         self.height = None
         self.food_eaten = 0
         self.last_position = None
+        self.counter = 0
 
 
 
@@ -90,8 +91,8 @@ class Agent:
 
         if (x is None):   # No object
             return 0
-        if y > self.height/2:
-            return 4        # object is far
+        #if y > self.height/2:
+        #    return 4        # object is far
         if x < self.width/3:
             return 1       # object on left side
         if (x >= self.width/3) and (x <= (self.width/3 * 2)):
@@ -139,7 +140,10 @@ class Agent:
         if (self.food_eaten - temp_food) > 0:
             #self.last_position = None
             return 20
-        
+        if self.counter > 50:
+            self.terminal_state = True
+            self.counter = 0
+            return -5
         else:
             return 0
 
@@ -234,12 +238,19 @@ def train_loop(rob, episodes=20, steps=1000):
             print(f"Current state: {agent.current_state}, took action {agent.last_action}")
             agent.observed_state = agent.get_state()
             time.sleep(0.2)
+            if agent.current_state == 0:
+                if agent.observed_state == 0:
+                    agent.counter +=1
+                else:
+                    agent.counter = 0
             reward = agent.get_reward()
             agent.calc_Q_values(agent.last_action, reward)
             agent.current_state = agent.observed_state
 
         if agent.eps > agent.epsmin:
             agent.eps -= agent.decay
+        if agent.eps < agent.epsmin:
+            agent.eps = agent.epsmin
 
         for key, values in agent.q_values.items():
             print(f"State {key} Q-values: {values}")
