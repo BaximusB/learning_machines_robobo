@@ -30,13 +30,11 @@ class Agent:
         self.upper_bound_green = np.array([40, 255, 40])
         self.captured = False
         self.low_bound_red = np.array([0, 0, 100])
-        self.upper_bound_red = np.array([40, 40, 255])
+        self.upper_bound_red = np.array([60, 60, 255])
         self.width = None
         self.height = None
         self.last_position = None
         self.counter = 0
-
-
 
 
     def get_closest(self, contours):
@@ -59,9 +57,9 @@ class Agent:
         self.height = image.shape[1]
         cv2.imwrite("test.png", image)
         if not self.captured:
-            mask = cv2.inRange(image, self.low_bound_green, self.upper_bound_green)
+            mask = cv2.inRange(image, self.low_bound_red, self.upper_bound_red)
         else:
-            mask = cv2. inRange(image, self.low_bound_red, self.upper_bound_red)
+            mask = cv2. inRange(image, self.low_bound_green, self.upper_bound_green)
         cv2.imwrite("test1.png", mask)
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         if not contours:
@@ -84,16 +82,26 @@ class Agent:
         """
         sensors = [np.inf if x == False else x for x in self.rob.read_irs()]
 
+        if not self.captured and sensors[5] < 0.1:
+            # food captured
+            self.captured = True
+            return 5
+        if self.captured and sensors[5] > 0.1:
+            # food not captured anymore
+            self.captured = False
+            return 6
+
         x, y = self.get_blob_location()
+
         if (x is None):   # No object
             return 0
         if y < self.height/2:
             return 4        # object is far
-        if x < self.width/5:
+        if x < 2 * self.width/5:
             return 1       # object on left side
-        if (x >= self.width/5) and (x <= (4 * self.width/5)):
+        if (x >= 2 * self.width/5) and (x <= (3 * self.width/5)):
             return 2        #object in middle
-        if x > (4 * self.width/5):
+        if x > (3 * self.width/5):
             return 3        # object on right side
         return 0
 
@@ -125,10 +133,14 @@ class Agent:
             self.terminal_state = True
             return 50
 
+        ## food captured, sensor state
+        ## high reward
+
         if self.counter > 50:
             self.terminal_state = True
             self.counter = 0
             return -20
+
         else:
             return -1
 
