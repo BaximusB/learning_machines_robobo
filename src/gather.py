@@ -254,7 +254,7 @@ def plot_metrics(agent):
     plt.clf()
 
 
-def train_loop(rob, episodes=10, steps=150, evaluations=5):
+def train_loop(rob, episodes=20, steps=1000, evaluations=5):
     """
     Combines all of the above to run a training loop and update the Q-values
     Does 15 training epochs with 50 steps per epoch
@@ -287,7 +287,8 @@ def train_loop(rob, episodes=10, steps=150, evaluations=5):
                 else:
                     agent.counter = 0
             reward = agent.get_reward()
-            
+            agent.rewards += reward
+            agent.cum_reward.append(agent.rewards)
             agent.calc_Q_values(agent.last_action, reward)
             agent.current_state = agent.observed_state
 
