@@ -282,7 +282,7 @@ def train_loop(rob, episodes=20, steps=1000, evaluations=5):
             print("Collected: ", agent.collect)
             time.sleep(0.2)
             if agent.current_state == 0 or agent.current_state == 25: # Seeing noting (before and after collected)
-                if agent.observed_state == 0:
+                if agent.observed_state == 0 or agent.current_state == 25:
                     agent.counter +=1
                 else:
                     agent.counter = 0
