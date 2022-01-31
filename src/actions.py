@@ -2,16 +2,16 @@ def forward(rob):
     rob.move(10, 10, 2000)
 
 def turn_left(rob):
-    rob.move(-10, 10, 100)
+    rob.move(-10, 10, 250)
 
 def turn_right(rob):
-    rob.move(10, -10, 100)
+    rob.move(10, -10, 250)
 
 def turn_left_long(rob):
-    rob.move(-10, 10, 500)
+    rob.move(-5, 5, 1500)
 
 def turn_right_long(rob):
-    rob.move(10, -10, 500)
+    rob.move(5, -5, 1500)
 
 def select_action(rob, index):
     if index == 0:
