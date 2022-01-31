@@ -343,3 +343,13 @@ class SimulationRobobo(Robobo):
                                         [],[],[],bytearray(),vrep.simx_opmode_blocking)
         )
         return ints[0]
+
+    def base_position(self):
+        return vrep.unwrap_vrep(
+            vrep.simxGetObjectPosition(self._clientID, self._base, -1, vrep.simx_opmode_blocking)
+        )
+
+    def base_detects_food(self):
+        detection, _detection_point, _detected_handle, _detected_normal \
+            = self._vrep_read_proximity_sensor(self._base, vrep.simx_opmode_buffer)
+        return bool(detection)
