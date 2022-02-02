@@ -188,11 +188,9 @@ class Agent:
         ## food captured, sensor state
         ## high reward
         
-        ## Give high penalty when stuck
+        ## Terminate and give high penalty when stuck
         if self.counter > 50:
             self.terminal_state = True
-            self.collect = False
-            self.counter = 0
             return -20
         
         ## Give small reward when food is initially collected
@@ -222,6 +220,9 @@ class Agent:
 
 
 def evaluation(agent, evalsteps=100):
+    agent.collect = False
+    agent.initial_pickup = True
+    agent.counter = 0
     agent.rob.play_simulation()
     time.sleep(3)
     #agent.rob.move(10, -10, np.random.randint(1, 10) * 300) # random orientation
@@ -309,6 +310,9 @@ def train_loop(rob, episodes=50, steps=1000, evaluations=5):
     """
     agent = Agent(rob)
     for episode in range(episodes):
+        agent.collect = False
+        agent.initial_pickup = True
+        agent.counter = 0
         agent.rob.play_simulation()
         time.sleep(2)
         rob.set_phone_tilt(26, 10)
