@@ -1,26 +1,20 @@
 import numpy as np
-from actions import *
+from actions_jb import *
 import time
 import os
-import math
 import matplotlib.pyplot as plt
 import cv2
 
+# define agent
 class Agent:
     def __init__(self, rob):
-        """
-        Each state has multiple Q-values, therefore q_values is dict() object with keys=state and values=list of q-vals
-        num_states likely equals 6: 5 observing states and one state when nothing is observed
-        """
         self.gamma = 0.9
         self.eps = 0.4
         self.epsmin = 0.05
         self.decay = 0.04
         self.alpha = 0.3
-        self.alphamin = 0.01
         self.rob = rob
         self.last_action = None
-        #self.q_values = {x: [np.random.uniform(0, 1) for _ in range(6)] for x in range(10)}    # for now assuming five actions
         self.q_values = {x: [np.random.uniform(0, 1) for _ in range(4)] for x in range(20)}
         self.current_state = None   # state agent is in
         self.observed_state = None  # state agent is in after taking action a
@@ -45,13 +39,6 @@ class Agent:
         self.initial_pickup = True
         self.col = 0
         self.cols =["red","green"]
-        self.lost_counter = 0
-        
-        # not used
-        self.food_eaten = 0
-        self.last_position = None
-        self.last_red = None
-        
 
     def get_closest(self, contours):
         if len(contours) == 1:
@@ -64,8 +51,7 @@ class Agent:
                     yvals.append(-10)
                     continue
                 yvals.append(np.max(contour[:, :, 1]))
-            return np.argmax(yvals)
-        
+            return np.argmax(yvals)   
         
     def get_xy(self,mask):
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -80,13 +66,11 @@ class Agent:
         y = int(M["m01"]/M["m00"])
         return x, y
 
-
     def get_blob_location(self):
         image = self.rob.get_image_front()
         self.width = image.shape[0]
         self.height = image.shape[1]
         cv2.imwrite("test.png", image)
-        #print(image.shape)
         mask = cv2.inRange(image, self.red_low_bound, self.red_upper_bound)
         mask2 = cv2.inRange(image, self.green_low_bound, self.green_upper_bound)
         cv2.imwrite("testr.png", mask)
@@ -95,28 +79,24 @@ class Agent:
         gx, gy = self.get_xy(mask2)
         return rx, ry, gx, gy
 
-
     def get_state(self):
-        """
-        Should use infrared data to determine state.
-        States: No object, object to left, object in middle, object to right, object touched
-        returns int
-        """
+        # get sensor readings
         read = self.rob.read_irs()[3:]
         sensors = [np.inf if x == False else x for x in read]
         front = sensors[2]
         other = [True if x < self.threshold else False for x in np.delete(sensors, 2)]
-   
+    
+        # get blob readings
         rx, ry, gx, gy = self.get_blob_location()
         
-        # have we collected the food or have we lost it or not yet?
+        # detect if food is caught by checking if only front sensor is triggered
         if front < self.col_threshold and sum(other) < 1:
             self.collect = True                     # Assume collected when only detected very close in front sensor
         elif front > self.col_threshold or not (rx is None):
             self.collect = False                    # Assume lost when see Red again or front sensor not close
         self.prev_collect = self.collect
         
-        # if we have collected food then only return green states
+        # collected states
         if self.collect:
             if self.col == 0:
                 if (rx is None):    
@@ -141,7 +121,8 @@ class Agent:
                     return 8            # green object detected center
                 elif gx  > (self.width/5 * 3):
                     return 9            # green object detected right
-              
+
+        # non-collected states
         if not self.collect:
             if self.col == 0:
                 if (rx is None):    
@@ -166,61 +147,8 @@ class Agent:
                     return 18            # green object detected center
                 elif gx  > (self.width/5 * 3):
                     return 19            # green object detected right
-    
-    """def get_state(self):
-        read = self.rob.read_irs()[3:]
-        sensors = [np.inf if x == False else x for x in read]
-        front = sensors[2]
-        other = [True if x < self.threshold else False for x in np.delete(sensors, 2)]
-   
-        rx, ry, gx, gy = self.get_blob_location()
-        red = 0
-        green = 0
-        temp = 0
-        
-        if (rx is None):    
-            red = 0            # red object not detected
-        elif ry < self.height/2:
-            red = 1            # red object detected far
-        elif rx  < (self.width/5 * 2):
-            red = 2            # red object detected left
-        elif rx  >= (self.width/5 * 2) and rx <= (self.width/5 * 3):
-            red = 3            # red object detected center
-        elif rx  > (self.width/5 * 3):
-            red = 4            # red object detected right
-            
-        if (gx is None):    
-            green = 0            # green object not detected
-        elif gy < self.height/2:
-            green = 1            # green object detected far
-        elif gx  < (self.width/5 * 2):
-            green = 2            # green object detected left
-        elif gx  >= (self.width/5 * 2) and gx <= (self.width/5 * 3):
-            green = 3            # green object detected center
-        elif gx  > (self.width/5 * 3):
-            green = 4            # green object detected right
-        
-        if front < self.col_threshold and sum(other) < 1:
-            self.collect = True                     # Assume collected when only detected very close in front sensor
-        elif front > self.col_threshold or not (rx is None):
-            self.collect = False                    # Assume lost when see Red again or front sensor not close
-        self.prev_collect = self.collect
-        if self.collect:
-            temp = 5
-        else:
-            temp = 0
-            
-        
-        if self.col < 1:
-            return red + temp
-        else:
-            return green + temp"""
 
     def action(self, state):
-        """
-        Use epsilon greedy policy to determine action
-        runs certain action based on index, currently 5 actions
-        """
         action_index = np.argmax(self.q_values[state])
         if np.random.binomial(1, self.eps) == 1:
             print('Exploring')
@@ -234,39 +162,16 @@ class Agent:
             self.col = 1
         elif a == 0:
             self.col = 0
-        
-    """def action(self, state):
-        action_index = np.argmax(self.q_values[state])
-        if np.random.binomial(1, self.eps) == 1:
-            action_index = np.random.choice([x for x in range(6)])
-        
-        if action_index < 3:
-            self.col = 0
-        else:
-            self.col = 1
-        
-        self.last_action = action_index
-        select_action(self.rob, action_index %3)"""
-
-
+    
     def action_eval(self, state):
         action_index = np.argmax(self.q_values[state])
         select_action(self.rob, action_index)
 
     def get_reward(self):
-        """
-        Negative if observed (could be -1, -5, -10)
-        Positive if not observed (could be 1, 5, 10)
-        returns int
-        """
-        ## Give high reward when food is delivered
-        
+        ## Give high reward when food is delivered        
         if self.rob.base_detects_food():
             self.terminal_state = True
             return 50
-            
-        ## food captured, sensor state
-        ## high reward
         
         # if in collected state and we see green base in centre before and after action taken
         if self.current_state == 8:
@@ -283,44 +188,14 @@ class Agent:
             self.terminal_state = True
             return -30
         
-        ## Terminate and give high penalty when stuck with food
-        #if self.counter > 100 and self.collect:            
-        #    self.terminal_state = True
-        #    return -15
-        
         ## Give small reward when food is initially collected
         elif self.collect:
             if self.initial_pickup:
                 self.initial_pickup = False
                 return 30
         
+        # increase penalty the more food is lost
         return -1
-    
-    """def get_reward(self):
-        ## Give high reward when food is delivered
-        
-        if self.rob.base_detects_food():
-            self.terminal_state = True
-            return 50
-            
-        ## food captured, sensor state
-        ## high reward
-        
-        #if self.col 
-        
-        ## Terminate and give high penalty when stuck
-        if self.counter > 50:
-            self.terminal_state = True
-            return -20
-        
-        ## Give small reward when food is initially collected
-        elif self.collect:
-            if self.initial_pickup:
-                self.initial_pickup = False
-                return 30
-
-        return -1"""
-
 
     def calc_Q_values(self, action, reward):
         """
@@ -336,26 +211,34 @@ class Agent:
         g = self.gamma
         self.q_values[state][action] = current_q + a*(reward + g*next_q - current_q)
 
-
 def evaluation(agent, evalsteps=100):
+    # set params
     agent.collect = False
     agent.initial_pickup = True
     agent.counter = 0
+    agent.lost = 0
+    
+    # start simulation
     agent.rob.play_simulation()
     time.sleep(3)
-    #agent.rob.move(10, -10, np.random.randint(1, 10) * 300) # random orientation
-    agent.current_state = agent.get_state()
+    
+    # get state
+    agent.current_state = agent.get_state()    
     time.sleep(1)
+    
     colsteps = 0
     total_reward = 0
     totalsteps = 0
-    lost = 0
+    
+    # evaluate
     for step in range(evalsteps):
         if agent.terminal_state:
             agent.terminal_state = False
             agent.rob.move(0,0,100)
             break
-        agent.action_eval(agent.current_state)  # play best move according to policy
+        
+        # play best move according to policy
+        agent.action_eval(agent.current_state)
         time.sleep(0.2)
         agent.observed_state = agent.get_state()
         time.sleep(0.2)
@@ -368,25 +251,36 @@ def evaluation(agent, evalsteps=100):
                 agent.counter = 0
         else:
             agent.counter = 0
-                
+        
+        # get reward
         reward = agent.get_reward()        
         total_reward += reward
+        
+        # update current state
         agent.current_state = agent.observed_state
+        
+        # log
         print("Current step: ", step)
+        
         totalsteps += 1
         if agent.initial_pickup:
             colsteps = totalsteps
+        
+        # check if robot lost food
         if not agent.collect:
             if agent.prev_collect:
-                lost += 1
-    agent.total_lost.append(lost)
+                agent.lost += 1
+    
+    # update result lists
+    agent.total_lost.append(agent.lost)
     agent.total_reward.append(total_reward)
     agent.steps_col.append(colsteps)
     agent.steps.append(totalsteps)
+    
+    # stop simulation
     agent.rob.move(0,0,100)
     agent.rob.stop_world()
     time.sleep(1)
-
 
 def plot_metrics(agent):
     print("Total reward: ", agent.total_reward)
@@ -424,40 +318,46 @@ def plot_metrics(agent):
     plt.savefig("lost.png")
     plt.clf()
 
-
 def train_loop(rob, episodes=50, steps=1000, evaluations=5):
-    """
-    Combines all of the above to run a training loop and update the Q-values
-    Does 15 training epochs with 50 steps per epoch
-    returns nothing, should likely store values of self.q_values in file
-    """
+    # init agent
     agent = Agent(rob)
+    
+    # train
     for episode in range(episodes):
+        # set params
         agent.collect = False
         agent.initial_pickup = True
         agent.counter = 0
+        agent.lost = 0
+        
+        # start simulation
         agent.rob.play_simulation()
         time.sleep(2)
         rob.set_phone_tilt(26, 10)
-        # _time = np.random.randint(1, 10)*300
-        # agent.rob.move(10, -10, _time)      # random-ish orientation
-        # time.sleep(1)
+        
+        # get state
         agent.current_state = agent.get_state()
 
+        # train
         for step in range(steps):
             if agent.terminal_state:
                 agent.terminal_state = False
                 agent.rob.move(0,0,100)
                 break
-
+            
+            # do action
             agent.action(agent.current_state)
             time.sleep(0.2)
-            print("Current episode, step: ", episode, " ", step)
-            print(f"Current state: {agent.current_state}, took action {agent.last_action}")
-            agent.observed_state = agent.get_state()
-            print("Collected: ", agent.collect)
-            print("Current Vision: ", agent.cols[agent.col])
+            
+            # observe state
+            agent.observed_state = agent.get_state()            
             time.sleep(0.2)
+            
+            # log
+            print("Current episode: ", episode, ", current step: ", step)
+            print(f"Current state: {agent.current_state}, took action {agent.last_action}")            
+            print("Collected food: ", agent.collect)
+            print("Current mask: ", agent.cols[agent.col])
             
             # Seeing nothing (before and after collected) - handle being stuck
             if agent.current_state == 0 or agent.current_state == 5 or agent.current_state == 10 or agent.current_state == 15:
@@ -473,30 +373,42 @@ def train_loop(rob, episodes=50, steps=1000, evaluations=5):
                 if agent.prev_collect:
                     agent.lost += 1
             
-            reward = agent.get_reward()
-            print('Collected reward: ' + str(reward))
+            # get reward
+            reward = agent.get_reward()            
             agent.rewards += reward
             agent.cum_reward.append(agent.rewards)
             agent.calc_Q_values(agent.last_action, reward)
+            
+            # update current state
             agent.current_state = agent.observed_state
+            
+            # log
+            print('Collected reward: ' + str(reward))
 
+        # decay exploration
         if agent.eps > agent.epsmin:
             agent.eps -= agent.decay
         if agent.eps < agent.epsmin:
             agent.eps = agent.epsmin
 
-
+        # q-values
         for key, values in agent.q_values.items():
             print(f"State {key} Q-values: {values}")
+            
+        # stop simulation
         agent.rob.move(0,0,100)
         agent.rob.stop_world()
         time.sleep(1)
+    
+    # eval
     for ev in range(evaluations):
         print("Current eval round: ", ev)
         evaluation(agent, 150)
-        
+    
+    # plot
     plot_metrics(agent)
 
+    # update q-values
     if os.path.exists("Qvalues.txt"):
         os.remove('Qvalues.txt')
     for key, values in agent.q_values.items():

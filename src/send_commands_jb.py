@@ -12,7 +12,9 @@ import signal
 import prey
 
 # from agent import *
+import gather_jb
 import gather_jb_lost_counter
+import gather_jb_lost_and_center
 from hardware import *
 
 
