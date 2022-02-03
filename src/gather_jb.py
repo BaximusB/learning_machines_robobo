@@ -183,7 +183,7 @@ class Agent:
             if self.observed_state == 13:
                 return 0.1
         
-        ## Terminate and give high penalty when stuck without food
+        ## Terminate and give mild penalty when stuck with food
         if self.counter > 50 and not self.collect:            
             self.terminal_state = True
             return -30

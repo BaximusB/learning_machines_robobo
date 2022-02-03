@@ -17,7 +17,6 @@ import gather_jb_lost_counter
 import gather_jb_lost_and_center
 from hardware import *
 
-
 def terminate_program(signal_number, frame):
     print("Ctrl-C received, terminating program")
     sys.exit(1)

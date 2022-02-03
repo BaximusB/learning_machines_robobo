@@ -15,7 +15,7 @@ class Agent:
         self.alpha = 0.3
         self.rob = rob
         self.last_action = None
-        self.q_values = {x: [np.random.uniform(0, 1) for _ in range(4)] for x in range(20)}
+        self.q_values = {x: [np.random.uniform(0, 1) for _ in range(4)] for x in range(22)}
         self.current_state = None   # state agent is in
         self.observed_state = None  # state agent is in after taking action a
         self.terminal_state = False
@@ -113,40 +113,44 @@ class Agent:
             if self.col == 1: 
                 if (gx is None):    
                     return 5            # green object not detected
+                elif gy < self.height/2 and gx >= (self.width/5 * 2) and gx <= (self.width/5 * 3):
+                    return 6            # green object detected far and in the centre
                 elif gy < self.height/2:
-                    return 6            # green object detected far
+                    return 7            # green object detected far
                 elif gx  < (self.width/5 * 2):
-                    return 7            # green object detected left
+                    return 8            # green object detected left
                 elif gx  >= (self.width/5 * 2) and gx <= (self.width/5 * 3):
-                    return 8            # green object detected center
+                    return 9            # green object detected center
                 elif gx  > (self.width/5 * 3):
-                    return 9            # green object detected right
+                    return 10            # green object detected right
 
         # non-collected states
         if not self.collect:
             if self.col == 0:
                 if (rx is None):    
-                    return 10            # red object not detected
+                    return 11            # red object not detected
+                elif ry < self.height/2 and rx >= (self.width/5 * 2) and rx <= (self.width/5 * 3):
+                    return 12            # red object detected far and in the centre
                 elif ry < self.height/2:
-                    return 11           # red object detected far
+                    return 13           # red object detected far
                 elif rx  < (self.width/5 * 2):
-                    return 12            # red object detected left
+                    return 14            # red object detected left
                 elif rx  >= (self.width/5 * 2) and rx <= (self.width/5 * 3):
-                    return 13            # red object detected center
+                    return 15            # red object detected center
                 elif rx  > (self.width/5 * 3):
-                    return 14            # red object detected right
+                    return 16            # red object detected right
             
             if self.col == 1:
                 if (gx is None):    
-                    return 15            # green object not detected
+                    return 17            # green object not detected
                 elif gy < self.height/2:
-                    return 16            # green object detected far
+                    return 18            # green object detected far
                 elif gx  < (self.width/5 * 2):
-                    return 17            # green object detected left
+                    return 19            # green object detected left
                 elif gx  >= (self.width/5 * 2) and gx <= (self.width/5 * 3):
-                    return 18            # green object detected center
+                    return 20            # green object detected center
                 elif gx  > (self.width/5 * 3):
-                    return 19            # green object detected right
+                    return 21            # green object detected right
 
     def action(self, state):
         action_index = np.argmax(self.q_values[state])
@@ -173,14 +177,14 @@ class Agent:
             self.terminal_state = True
             return 50
         
-        # if in collected state and we see green base in centre before and after action taken
-        if self.current_state == 8:
-            if self.observed_state == 8:
+        # if in collected state and we see green base in far centre or centre before and after action taken
+        if self.current_state == 6 or self.current_state == 9:
+            if self.observed_state == 6 or self.observed_state == 9:
                 return 0.5
             
-        # if not collected state, and we see red food in centre before and after action taken 
-        if self.current_state == 13:
-            if self.observed_state == 13:
+        # if not collected state, and we see red food in far centre or centre before and after action taken 
+        if self.current_state == 12 or self.current_state == 15:
+            if self.observed_state == 12 or self.observed_state == 15:
                 return 0.5
         
         ## Terminate and give high penalty when stuck without food
@@ -188,7 +192,7 @@ class Agent:
             self.terminal_state = True
             return -30
         
-        ## Terminate and give high penalty when stuck without food
+        ## Terminate and give mild penalty when stuck with food
         if self.counter > 100 and self.collect:            
             self.terminal_state = True
             return -15
