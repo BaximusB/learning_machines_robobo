@@ -36,9 +36,6 @@ class Agent:
         self.last_position = None
         self.counter = 0
 
-
-
-
     def get_closest(self, contours):
         if len(contours) == 1:
             return 0

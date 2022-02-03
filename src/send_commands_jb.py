@@ -12,7 +12,7 @@ import signal
 import prey
 
 # from agent import *
-import forage_bring
+import gather_jb_lost_counter
 from hardware import *
 
 
@@ -24,9 +24,9 @@ def main():
     signal.signal(signal.SIGINT, terminate_program)
 
     # rob = robobo.HardwareRobobo(camera=True).connect(address="")
-    rob = robobo.SimulationRobobo().connect(address='192.168.1.101', port=19997)
+    rob = robobo.SimulationRobobo().connect(address='127.0.0.1', port=19997)
     rob.set_phone_tilt(26, 10)
-    forage_bring.train_loop(rob)
+    gather_jb_lost_counter.train_loop(rob)
 
     # rob.play_simulation()
     # time.sleep(1)
