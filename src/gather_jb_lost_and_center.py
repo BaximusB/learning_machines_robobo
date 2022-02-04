@@ -177,14 +177,34 @@ class Agent:
             self.terminal_state = True
             return 50
         
-        # if in collected state and we see green base in far centre or centre before and after action taken
-        if self.current_state == 6 or self.current_state == 9:
-            if self.observed_state == 6 or self.observed_state == 9:
-                return 0.5
+        # if in collected state and we see green base in far centre before and after action taken
+        if self.current_state == 6:
+            if self.observed_state == 6:
+                return 0.1
             
-        # if not collected state, and we see red food in far centre or centre before and after action taken 
-        if self.current_state == 12 or self.current_state == 15:
-            if self.observed_state == 12 or self.observed_state == 15:
+        # if in collected state and we see green base in far centre before and then centre after action taken
+        if self.current_state == 6:
+            if self.observed_state == 9:
+                return 5
+        
+        # if in collected state and we see green base in centre before and after action taken
+        if self.current_state == 9:
+            if self.observed_state == 9:
+                return 0.5
+        
+        # if in collected state and we see red food in far centre before and after action taken
+        if self.current_state == 12:
+            if self.observed_state == 12:
+                return 0.1
+            
+        # if not collected state, and we see red food in far centre before and then centre after action taken 
+        if self.current_state == 12:
+            if self.observed_state == 15:
+                return 5
+            
+        # if not collected state, and we see red food in centre before and after action taken 
+        if self.current_state == 15:
+            if self.observed_state == 15:
                 return 0.5
         
         ## Terminate and give high penalty when stuck without food
@@ -253,8 +273,8 @@ def evaluation(agent, evalsteps=100):
         time.sleep(0.2)
         
         # Seeing nothing (before and after collected) - handle being stuck
-        if agent.current_state == 0 or agent.current_state == 5 or agent.current_state == 10 or agent.current_state == 15:
-            if agent.observed_state == 0 or agent.observed_state == 5 or agent.observed_state == 10 or agent.observed_state == 15:
+        if agent.current_state == 0 or agent.current_state == 5 or agent.current_state == 11 or agent.current_state == 17:
+            if agent.observed_state == 0 or agent.observed_state == 5 or agent.observed_state == 11 or agent.observed_state == 17:
                 agent.counter +=1
             else:
                 agent.counter = 0
@@ -369,8 +389,8 @@ def train_loop(rob, episodes=50, steps=1000, evaluations=5):
             print("Current mask: ", agent.cols[agent.col])
             
             # Seeing nothing (before and after collected) - handle being stuck
-            if agent.current_state == 0 or agent.current_state == 5 or agent.current_state == 10 or agent.current_state == 15:
-                if agent.observed_state == 0 or agent.observed_state == 5 or agent.observed_state == 10 or agent.observed_state == 15:
+            if agent.current_state == 0 or agent.current_state == 5 or agent.current_state == 11 or agent.current_state == 17:
+                if agent.observed_state == 0 or agent.observed_state == 5 or agent.observed_state == 11 or agent.observed_state == 17:
                     agent.counter +=1
                 else:
                     agent.counter = 0

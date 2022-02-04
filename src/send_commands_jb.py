@@ -27,7 +27,7 @@ def main():
     # rob = robobo.HardwareRobobo(camera=True).connect(address="")
     rob = robobo.SimulationRobobo().connect(address='127.0.0.1', port=19997)
     rob.set_phone_tilt(26, 10)
-    gather_jb_lost_counter.train_loop(rob)
+    gather_jb_lost_and_center.train_loop(rob)
 
     # rob.play_simulation()
     # time.sleep(1)

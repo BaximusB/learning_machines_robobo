@@ -249,8 +249,8 @@ def evaluation(agent, evalsteps=100):
         time.sleep(0.2)
         
         # Seeing nothing (before and after collected) - handle being stuck
-        if agent.current_state >= 0 or agent.current_state <= 5 or agent.current_state == 10 or agent.current_state >= 15:
-            if agent.observed_state >= 0 or agent.observed_state <= 5 or agent.observed_state == 10 or agent.observed_state >= 15:
+        if agent.current_state == 0 or agent.current_state == 5 or agent.current_state == 10 or agent.current_state == 15:
+            if agent.observed_state == 0 or agent.observed_state == 5 or agent.observed_state == 10 or agent.observed_state == 15:
                 agent.counter +=1
             else:
                 agent.counter = 0
